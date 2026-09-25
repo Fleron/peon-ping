@@ -43,11 +43,11 @@ any_banner() { [ -s "$TEST_DIR/native_notifier.log" ] || [ -s "$TEST_DIR/termina
 @test "native: Ghostty click runs ghostty-focus.sh by absolute path" {
   cp "$(dirname "$PEON_SH")/scripts/ghostty-focus.sh" "$TEST_DIR/scripts/ghostty-focus.sh"
   chmod +x "$TEST_DIR/scripts/ghostty-focus.sh"
-  TERM_PROGRAM=ghostty PEON_NATIVE_NOTIFIER="$TEST_DIR/peon-notify" run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  TERM_PROGRAM=ghostty PEON_SESSION_TTY=/dev/ttys042 PEON_NATIVE_NOTIFIER="$TEST_DIR/peon-notify" run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
   [ "$PEON_EXIT" -eq 0 ]
   local execute
   execute="$(native_log | grep -A1 -x -- '-execute' | tail -1)"
-  [[ "$execute" == /*"/scripts/ghostty-focus.sh "* ]]
+  [[ "$execute" == /*"/scripts/ghostty-focus.sh /dev/ttys042 "* ]]
 }
 
 @test "categories: PermissionRequest shows a banner" {

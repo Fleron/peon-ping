@@ -96,7 +96,7 @@ D10. The idle reminder keeps a banner when no "done" banner came within the hour
 
 1. Spike: build a minimal Peon.app (post mode, click mode logging to `$TMPDIR/peon-click.log`) with `native/peon-notify/build.sh`, then post one test banner. → check: permission prompt appears, banner shows the peon on the left, and clicking writes a line to the log. If authorization is denied or the icon is generic, stop (D2).
 2. Spike: in a Ghostty tab, run `printf '\033]2;peon-test\007'` and then `osascript -e 'tell application "Ghostty" to get name of every terminal of every tab of every window'` (adjust to the sdef's exact element names). → check: `peon-test` appears within 1s. If it doesn't, drop to cwd matching and record that in D5.
-3. You clone the fork to `~/Documents/Tools/peon-ping` in your own terminal. I work there from a branch `native-notify`. → check: `git -C ~/Documents/Tools/peon-ping log --oneline -1` shows 8ef3766 or newer.
+3. You clone the fork to `~/Documents/Tools/peon-ping` in your own terminal. I work there from a branch `worktree-native-notify`. → check: `git -C ~/Documents/Tools/peon-ping log --oneline -1` shows 8ef3766 or newer.
 4. Add `PEON_NATIVE_NOTIFIER=/nonexistent` to `tests/setup.bash`. Then write `scripts/ghostty-focus.sh`, the Ghostty case in `_terminal_focus_click_command`, and the native branch in `scripts/notify.sh`. Add BATS tests in `tests/peon.bats`: with a mock `PEON_NATIVE_NOTIFIER` present, standard style calls it with `-title -message -group -execute` and never calls terminal-notifier. With it absent, terminal-notifier runs as before. With `PEON_BUNDLE_ID=com.mitchellh.ghostty`, the `-execute` value starts with an absolute path ending in `ghostty-focus.sh` and contains the session tty. → check: `bats tests/peon.bats -f native` passes.
 5. Add `notification_categories` and the `SubagentStop` banner skip in peon.sh, the config defaults, and the `peon update` backfill. BATS tests:
    - `Stop` notifies.
@@ -115,7 +115,7 @@ D10. The idle reminder keeps a banner when no "done" banner came within the hour
    - `grep -c peon-ping ~/.codex/config.toml` is at least 1.
    - `~/.claude/hooks/peon-ping/scripts/ghostty-focus.sh` exists.
    - `grep -c '"notification_style": "standard"' ~/.claude/hooks/peon-ping/config.json` prints 1. If it prints 0, you're re-running over an older install. Add the key by hand.
-9. Commit on `native-notify` and push to your fork. → check: `git status` is clean and the branch is on GitHub.
+9. Commit on `worktree-native-notify` and push to your fork. → check: `git status` is clean and the branch is on GitHub.
 
 ## Validation
 
@@ -139,7 +139,7 @@ All in your own terminal, in Ghostty.
 
 ## Skeleton
 
-### File tree (fork `~/Documents/Tools/peon-ping`, branch `native-notify`)
+### File tree (fork `~/Documents/Tools/peon-ping`, branch `worktree-native-notify`)
 
 ```
 peon-ping/
