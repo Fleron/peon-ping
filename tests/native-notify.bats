@@ -1,0 +1,123 @@
+#!/usr/bin/env bats
+
+load setup.bash
+
+setup() {
+  setup_test_env
+  export PEON_PLATFORM=mac
+  export CMUX_SOCKET_PATH= CMUX_SOCKET= CMUX_WORKSPACE_ID= CMUX_SURFACE_ID= CMUX_BUNDLED_CLI_PATH= CMUX_BUNDLE_ID=
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{ "default_pack": "peon", "volume": 0.5, "enabled": true, "desktop_notifications": true, "notification_style": "standard", "categories": { "task.complete": true, "input.required": true, "resource.limit": true, "task.error": true } }
+JSON
+  cat > "$TEST_DIR/peon-notify" <<'SCRIPT'
+#!/bin/bash
+printf '%s\n' "$@" >> "${CLAUDE_PEON_DIR}/native_notifier.log"
+SCRIPT
+  chmod +x "$TEST_DIR/peon-notify"
+}
+
+teardown() {
+  teardown_test_env
+}
+
+native_log() { cat "$TEST_DIR/native_notifier.log" 2>/dev/null; }
+any_banner() { [ -s "$TEST_DIR/native_notifier.log" ] || [ -s "$TEST_DIR/terminal_notifier.log" ]; }
+
+@test "native: standard style posts through Peon.app instead of terminal-notifier" {
+  PEON_NATIVE_NOTIFIER="$TEST_DIR/peon-notify" run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  [[ "$(native_log)" == *"-title"* ]]
+  [[ "$(native_log)" == *"myproject"* ]]
+  [[ "$(native_log)" == *"peon-ping-s1"* ]]
+  ! [[ "$(native_log)" == *"-appIcon"* ]]
+  ! [ -f "$TEST_DIR/terminal_notifier.log" ]
+}
+
+@test "native: falls back to terminal-notifier when Peon.app is missing" {
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  ! [ -f "$TEST_DIR/native_notifier.log" ]
+  [ -s "$TEST_DIR/terminal_notifier.log" ]
+}
+
+@test "native: Ghostty click runs ghostty-focus.sh by absolute path" {
+  cp "$(dirname "$PEON_SH")/scripts/ghostty-focus.sh" "$TEST_DIR/scripts/ghostty-focus.sh"
+  chmod +x "$TEST_DIR/scripts/ghostty-focus.sh"
+  TERM_PROGRAM=ghostty PEON_NATIVE_NOTIFIER="$TEST_DIR/peon-notify" run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  local execute
+  execute="$(native_log | grep -A1 -x -- '-execute' | tail -1)"
+  [[ "$execute" == /*"/scripts/ghostty-focus.sh "* ]]
+}
+
+@test "categories: PermissionRequest shows a banner" {
+  PEON_NATIVE_NOTIFIER="$TEST_DIR/peon-notify" run_peon '{"hook_event_name":"PermissionRequest","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default","tool_name":"Bash"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  afplay_was_called
+  [ -s "$TEST_DIR/native_notifier.log" ]
+}
+
+@test "categories: SubagentStop plays a sound without a banner" {
+  PEON_NATIVE_NOTIFIER="$TEST_DIR/peon-notify" run_peon '{"hook_event_name":"SubagentStop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  afplay_was_called
+  ! any_banner
+}
+
+@test "categories: PreCompact plays a sound without a banner" {
+  PEON_NATIVE_NOTIFIER="$TEST_DIR/peon-notify" run_peon '{"hook_event_name":"PreCompact","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  afplay_was_called
+  ! any_banner
+}
+
+@test "categories: failed Bash command plays a sound without a banner" {
+  PEON_NATIVE_NOTIFIER="$TEST_DIR/peon-notify" run_peon '{"hook_event_name":"PostToolUseFailure","tool_name":"Bash","error":"Exit code 1","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  afplay_was_called
+  ! any_banner
+}
+
+@test "categories: notification_categories can re-enable resource.limit banners" {
+  /usr/bin/python3 -c "
+import json
+cfg = json.load(open('$TEST_DIR/config.json'))
+cfg['notification_categories'] = ['task.complete', 'input.required', 'resource.limit']
+json.dump(cfg, open('$TEST_DIR/config.json', 'w'))
+"
+  PEON_NATIVE_NOTIFIER="$TEST_DIR/peon-notify" run_peon '{"hook_event_name":"PreCompact","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  [ -s "$TEST_DIR/native_notifier.log" ]
+}
+
+# Mock Ghostty: terminal T2 "sees" a title once it has been written to the fake tty.
+write_ghostty_mock() {
+  cat > "$TEST_DIR/osascript" <<SCRIPT
+#!/bin/bash
+echo "\$*" >> "$TEST_DIR/osascript_calls.log"
+case "\$*" in
+  *out.push*) printf 'T1\tother: done\nT2\tmyproject: done\n' ;;
+  *" name peon-"*) [ "$1" = seen ] && grep -q "\${@: -1}" "$TEST_DIR/fake-tty" && echo T2 ;;
+  *" cwd /tmp/myproject") echo T3 ;;
+esac
+SCRIPT
+  chmod +x "$TEST_DIR/osascript"
+  : > "$TEST_DIR/fake-tty"
+}
+
+@test "ghostty-focus: focuses the tagged terminal and restores its title" {
+  write_ghostty_mock seen
+  PEON_OSASCRIPT="$TEST_DIR/osascript" run bash "$(dirname "$PEON_SH")/scripts/ghostty-focus.sh" "$TEST_DIR/fake-tty" /tmp/myproject
+  [ "$status" -eq 0 ]
+  grep -q " name peon-" "$TEST_DIR/osascript_calls.log"
+  [ "$(cat "$TEST_DIR/fake-tty")" = "$(printf '\033]2;myproject: done\007')" ]
+  ! grep -q " cwd " "$TEST_DIR/osascript_calls.log"
+}
+
+@test "ghostty-focus: falls back to working directory when the tag is never seen" {
+  write_ghostty_mock unseen
+  PEON_OSASCRIPT="$TEST_DIR/osascript" run bash "$(dirname "$PEON_SH")/scripts/ghostty-focus.sh" "$TEST_DIR/fake-tty" /tmp/myproject
+  [ "$status" -eq 0 ]
+  grep -q " cwd /tmp/myproject" "$TEST_DIR/osascript_calls.log"
+  ! grep -q "to activate" "$TEST_DIR/osascript_calls.log"
+}

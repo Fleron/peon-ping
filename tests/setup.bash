@@ -20,6 +20,8 @@ setup_test_env() {
   export TEST_DIR
   export CLAUDE_PEON_DIR="$TEST_DIR"
   export PEON_TEST=1
+  # A real ~/Applications/Peon.app would otherwise bypass the terminal-notifier mock.
+  export PEON_NATIVE_NOTIFIER=/nonexistent
 
   # Prevent the user's live cmux session from leaking into tests that expect
   # normal desktop notification paths unless they opt into cmux explicitly.

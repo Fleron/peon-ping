@@ -802,6 +802,7 @@ chmod +x "$INSTALL_DIR/scripts/cmux-focus.sh" 2>/dev/null || true
 chmod +x "$INSTALL_DIR/scripts/cmux-status-presentation.sh" 2>/dev/null || true
 chmod +x "$INSTALL_DIR/scripts/cmux-workspace-field.sh" 2>/dev/null || true
 chmod +x "$INSTALL_DIR/scripts/tts-native.sh" 2>/dev/null || true
+chmod +x "$INSTALL_DIR/scripts/ghostty-focus.sh" 2>/dev/null || true
 
 # --- Build peon-play (macOS Sound Effects device support) ---
 if [ "$PLATFORM" = "mac" ] && command -v swiftc &>/dev/null; then
@@ -833,6 +834,16 @@ if [ "$PLATFORM" = "mac" ] && command -v swiftc &>/dev/null; then
       && echo "  meeting-detect built successfully" \
       || echo "  Warning: could not build meeting-detect, using process-based fallback"
   fi
+fi
+
+# --- Build Peon.app (native Notification Center sender with the peon icon) ---
+# Only from a local clone: the app sources live outside scripts/ and are not downloaded.
+if [ "$PLATFORM" = "mac" ] && command -v swiftc &>/dev/null && [ -n "$SCRIPT_DIR" ] \
+   && [ -f "$SCRIPT_DIR/native/peon-notify/build.sh" ]; then
+  echo "Building Peon.app (native notifications)..."
+  bash "$SCRIPT_DIR/native/peon-notify/build.sh" "$SCRIPT_DIR/docs/peon-icon.png" >/dev/null \
+    && echo "  Peon.app built at ~/Applications/Peon.app" \
+    || echo "  Warning: could not build Peon.app, using terminal-notifier/osascript fallback"
 fi
 
 # --- Install skills (slash commands) ---

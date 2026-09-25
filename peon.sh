@@ -4302,6 +4302,10 @@ if 'suppress_idle_prompt_repeats' not in cfg:
     cfg['suppress_idle_prompt_repeats'] = True
     changed = True
     migrations.append('suppress_idle_prompt_repeats')
+if 'notification_categories' not in cfg:
+    cfg['notification_categories'] = ['task.complete', 'input.required']
+    changed = True
+    migrations.append('notification_categories')
 if 'idle_prompt_suppress_window_seconds' not in cfg:
     cfg['idle_prompt_suppress_window_seconds'] = 3600
     changed = True
@@ -6215,6 +6219,13 @@ elif category:
 if category and not cat_enabled.get(category, True):
     log('route', category=category, suppressed=True, reason='category_disabled')
     category = ''
+    notify = ''
+    notify_color = ''
+
+# --- Banner filter: categories keep their sound, only the desktop notification is dropped ---
+_notif_categories = cfg.get('notification_categories', ['task.complete', 'input.required'])
+if notify and (category not in _notif_categories or event == 'SubagentStop'):
+    log('route', category=category, notify_suppressed=True, reason='notification_category_filter')
     notify = ''
     notify_color = ''
 

@@ -119,6 +119,14 @@ _find_cmux_focus_helper() {
   return 1
 }
 
+_find_ghostty_focus_helper() {
+  local p="$PEON_DIR/scripts/ghostty-focus.sh"
+  [ -x "$p" ] && { echo "$p"; return 0; }
+  p="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ghostty-focus.sh"
+  [ -x "$p" ] && { echo "$p"; return 0; }
+  return 1
+}
+
 _find_local_focus_helper() {
   local p="$PEON_DIR/scripts/local-focus.sh"
   [ -x "$p" ] && { echo "$p"; return 0; }
@@ -178,6 +186,13 @@ _terminal_focus_click_command() {
     jxa+='{ts[t].select();ss[s].select();ws[w].index=1;iTerm.activate();return}}catch(e){}}}}'
     jxa+='iTerm.activate()}'
     printf '/usr/bin/osascript -l JavaScript -e %q %q' "$jxa" "$session_tty"
+    return 0
+  fi
+
+  if [ "$bundle_id" = "com.mitchellh.ghostty" ]; then
+    local ghostty_focus
+    ghostty_focus="$(_find_ghostty_focus_helper)" || return 1
+    printf '%q %q %q' "$ghostty_focus" "$session_tty" "$PWD"
     return 0
   fi
 
@@ -545,7 +560,18 @@ case "$PEON_PLATFORM" in
           else
             # Native macOS Notification Center (grouped by session, rich subtitle)
             notif_group="peon-ping-${PEON_SESSION_ID:-default}"
-            if command -v terminal-notifier &>/dev/null; then
+            native_notifier="${PEON_NATIVE_NOTIFIER:-$HOME/Applications/Peon.app/Contents/MacOS/peon-notify}"
+            if [ -x "$native_notifier" ]; then
+              native_args=(-title "$title" -message "$msg" -group "$notif_group")
+              [ -n "$notif_subtitle" ] && native_args+=(-subtitle "$notif_subtitle")
+              [ -n "$click_command" ] && native_args+=(-execute "$click_command")
+              _notify_debug "standard native group=$(printf '%q' "$notif_group") execute=$(printf '%q' "$click_command")"
+              if [ "$use_bg" = true ]; then
+                nohup "$native_notifier" "${native_args[@]}" >/dev/null 2>&1 &
+              else
+                "$native_notifier" "${native_args[@]}" >/dev/null 2>&1
+              fi
+            elif command -v terminal-notifier &>/dev/null; then
               tn_args=(-title "$title" -message "$msg")
               [ -n "$notif_subtitle" ] && tn_args+=(-subtitle "$notif_subtitle")
               [ -f "$icon_path" ] && tn_args+=(-appIcon "$icon_path")
