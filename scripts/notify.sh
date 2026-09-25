@@ -560,7 +560,9 @@ case "$PEON_PLATFORM" in
           else
             # Native macOS Notification Center (grouped by session, rich subtitle)
             notif_group="peon-ping-${PEON_SESSION_ID:-default}"
-            native_notifier="${PEON_NATIVE_NOTIFIER:-$HOME/Applications/Peon.app/Contents/MacOS/peon-notify}"
+            native_app="Peon.app"
+            [ "${PEON_SESSION_IDE:-}" = "codex" ] && native_app="Peasant.app"
+            native_notifier="${PEON_NATIVE_NOTIFIER:-${PEON_NATIVE_APPS_DIR:-$HOME/Applications}/$native_app/Contents/MacOS/peon-notify}"
             if [ -x "$native_notifier" ]; then
               native_args=(-title "$title" -message "$msg" -group "$notif_group")
               [ -n "$notif_subtitle" ] && native_args+=(-subtitle "$notif_subtitle")

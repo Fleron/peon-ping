@@ -1076,6 +1076,7 @@ send_notification() {
       export PEON_NOTIFY_TYPE="${NOTIFY_TYPE:-}"
       export PEON_NOTIF_CLOSE_BUTTON="${NOTIF_CLOSE_BUTTON:-true}"
       export PEON_SESSION_ID="${SESSION_ID:-}"
+      export PEON_SESSION_IDE="${SESSION_IDE:-}"
       export PEON_NOTIF_STACKING="${NOTIF_STACKING:-true}"
       bash "$notify_script" "$msg" "$title" "$color" "$icon_path"
       ;;
@@ -6560,6 +6561,7 @@ print('VOLUME=' + q(str(volume)))
 print('PROJECT=' + q(project))
 print('PROJECT_FROM_TITLE_OVERRIDE=' + ('true' if project_from_title_override else 'false'))
 print('IDE_LABEL=' + q(ide_label))
+print('SESSION_IDE=' + q(session_ide))
 print('NOTIFICATION_TITLE_IDE=' + ('true' if cfg.get('notification_title_ide', False) else 'false'))
 print('CWD=' + q(cwd))
 print('STATUS=' + q(status))

@@ -840,10 +840,15 @@ fi
 # Only from a local clone: the app sources live outside scripts/ and are not downloaded.
 if [ "$PLATFORM" = "mac" ] && command -v swiftc &>/dev/null && [ -n "$SCRIPT_DIR" ] \
    && [ -f "$SCRIPT_DIR/native/peon-notify/build.sh" ]; then
-  echo "Building Peon.app (native notifications)..."
-  bash "$SCRIPT_DIR/native/peon-notify/build.sh" "$SCRIPT_DIR/docs/peon-icon.png" >/dev/null \
-    && echo "  Peon.app built at ~/Applications/Peon.app" \
-    || echo "  Warning: could not build Peon.app, using terminal-notifier/osascript fallback"
+  echo "Building Peon.app (Claude) and Peasant.app (Codex) for native notifications..."
+  while read -r _pp_name _pp_bundle _pp_icon; do
+    bash "$SCRIPT_DIR/native/peon-notify/build.sh" "$_pp_name" "$_pp_bundle" "$SCRIPT_DIR/native/peon-notify/icons/$_pp_icon" >/dev/null \
+      && echo "  $_pp_name.app built at ~/Applications/$_pp_name.app" \
+      || echo "  Warning: could not build $_pp_name.app, using terminal-notifier/osascript fallback"
+  done <<'APPS'
+Peon com.fleron.peon-notify peon.gif
+Peasant com.fleron.peasant-notify peasant.gif
+APPS
 fi
 
 # --- Install skills (slash commands) ---

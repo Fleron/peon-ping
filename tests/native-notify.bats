@@ -33,6 +33,28 @@ any_banner() { [ -s "$TEST_DIR/native_notifier.log" ] || [ -s "$TEST_DIR/termina
   ! [ -f "$TEST_DIR/terminal_notifier.log" ]
 }
 
+install_mock_apps() {
+  for app in Peon Peasant; do
+    mkdir -p "$TEST_DIR/apps/$app.app/Contents/MacOS"
+    printf '#!/bin/bash\necho %s >> "%s/which_app.log"\n' "$app" "$TEST_DIR" > "$TEST_DIR/apps/$app.app/Contents/MacOS/peon-notify"
+    chmod +x "$TEST_DIR/apps/$app.app/Contents/MacOS/peon-notify"
+  done
+  unset PEON_NATIVE_NOTIFIER
+  export PEON_NATIVE_APPS_DIR="$TEST_DIR/apps"
+}
+
+@test "native: Claude sessions post through Peon.app" {
+  install_mock_apps
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$(cat "$TEST_DIR/which_app.log")" = "Peon" ]
+}
+
+@test "native: Codex sessions post through Peasant.app" {
+  install_mock_apps
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"codex-1","source":"codex","permission_mode":"default"}'
+  [ "$(cat "$TEST_DIR/which_app.log")" = "Peasant" ]
+}
+
 @test "native: falls back to terminal-notifier when Peon.app is missing" {
   run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
   [ "$PEON_EXIT" -eq 0 ]
