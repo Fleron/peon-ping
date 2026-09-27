@@ -1077,6 +1077,9 @@ send_notification() {
       export PEON_NOTIF_CLOSE_BUTTON="${NOTIF_CLOSE_BUTTON:-true}"
       export PEON_SESSION_ID="${SESSION_ID:-}"
       export PEON_SESSION_IDE="${SESSION_IDE:-}"
+      export PEON_SOUND_LABEL="${SOUND_LABEL:-}"
+      export PEON_PACK_SPEAKER="${PACK_SPEAKER:-}"
+      export PEON_PACK_TINT="${PACK_TINT:-}"
       export PEON_NOTIF_STACKING="${NOTIF_STACKING:-true}"
       bash "$notify_script" "$msg" "$title" "$color" "$icon_path"
       ;;
@@ -6260,6 +6263,9 @@ elif not category:
 # --- Pick sound (skip if no category or paused) ---
 sound_file = ''
 icon_path = ''
+sound_label = ''
+pack_speaker = ''
+pack_tint = ''
 if category and not paused:
     pack_dir = os.path.join(peon_dir, 'packs', active_pack)
     try:
@@ -6271,6 +6277,8 @@ if category and not paused:
                 break
         if not manifest:
             manifest = {}
+        pack_speaker = str(manifest.get('speaker', ''))
+        pack_tint = str(manifest.get('tint', ''))
         sounds = manifest.get('categories', {}).get(category, {}).get('sounds', [])
         disabled_list = cfg.get('disabled_sounds', {}).get(active_pack, {}).get(category, []) or []
         if disabled_list:
@@ -6280,6 +6288,7 @@ if category and not paused:
             last_file = last_played.get(category, '')
             candidates = sounds if len(sounds) <= 1 else [s for s in sounds if s['file'] != last_file]
             pick = random.choice(candidates)
+            sound_label = str(pick.get('label', ''))
             last_played[category] = pick['file']
             state['last_played'] = last_played
             state_dirty = True
@@ -6603,6 +6612,9 @@ print('TMUX_PASSTHROUGH=' + ('true' if tmux_passthrough else 'false'))
 print('SUPPRESS_SOUND_WHEN_TAB_FOCUSED=' + ('true' if suppress_sound_when_tab_focused else 'false'))
 print('SOUND_FILE=' + q(sound_file))
 print('ICON_PATH=' + q(icon_path))
+print('SOUND_LABEL=' + q(sound_label))
+print('PACK_SPEAKER=' + q(pack_speaker))
+print('PACK_TINT=' + q(pack_tint))
 print('TRAINER_SOUND=' + q(trainer_sound))
 print('TRAINER_MSG=' + q(trainer_msg))
 print('TTS_ENABLED=' + ('true' if tts_enabled else 'false'))

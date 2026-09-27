@@ -1,0 +1,174 @@
+{
+  "cesp_version": "1.0",
+  "name": "human_custom",
+  "display_name": "Human Peasant (custom)",
+  "version": "1.0.0",
+  "description": "Hand-picked Peasant lines for the warcraft overlay theme",
+  "license": "CC-BY-NC-4.0",
+  "language": "en",
+  "icon": "portrait.gif",
+  "speaker": "Peasant",
+  "tint": "human",
+  "categories": {
+    "session.start": {
+      "sounds": [
+        {
+          "file": "sounds/PeasantReady1.wav",
+          "label": "Ready to work."
+        },
+        {
+          "file": "sounds/PeasantWhat1.wav",
+          "label": "Yes, milord?"
+        },
+        {
+          "file": "sounds/PeasantWhat2.wav",
+          "label": "What is it?"
+        }
+      ]
+    },
+    "task.acknowledge": {
+      "sounds": [
+        {
+          "file": "sounds/PeasantYes1.wav",
+          "label": "Right-o."
+        },
+        {
+          "file": "sounds/PeasantYes2.wav",
+          "label": "Yes, milord."
+        },
+        {
+          "file": "sounds/PeasantYes3.wav",
+          "label": "All right."
+        },
+        {
+          "file": "sounds/PeasantYes4.wav",
+          "label": "Off I go, then!"
+        },
+        {
+          "file": "sounds/PeasantYesAttack1.wav",
+          "label": "I guess I can..."
+        },
+        {
+          "file": "sounds/PeasantYesAttack2.wav",
+          "label": "If you want..."
+        }
+      ]
+    },
+    "resource.limit": {
+      "sounds": [
+        {
+          "file": "sounds/PeasantYesAttack4.wav",
+          "label": "That's it. I'm dead."
+        }
+      ]
+    },
+    "user.spam": {
+      "sounds": [
+        {
+          "file": "sounds/PeasantAngry1.wav",
+          "label": "You're the king? Well, I didn't vote for you."
+        },
+        {
+          "file": "sounds/PeasantAngry2.wav",
+          "label": "We found a witch! May we burn her?"
+        },
+        {
+          "file": "sounds/PeasantAngry3.wav",
+          "label": "Help! Help! I'm being repressed!"
+        },
+        {
+          "file": "sounds/PeasantAngry4.wav",
+          "label": "A horse kicked me once. It hurt."
+        },
+        {
+          "file": "sounds/PeasantAngry5.wav",
+          "label": "D'oh!"
+        }
+      ]
+    },
+    "task.complete": {
+      "sounds": [
+        {
+          "file": "sounds/PeasantReady1.wav",
+          "label": "Ready to work."
+        },
+        {
+          "file": "sounds/PeasantYes1.wav",
+          "label": "Right-o."
+        },
+        {
+          "file": "sounds/PeasantYes3.wav",
+          "label": "All right."
+        },
+        {
+          "file": "sounds/PeasantYes4.wav",
+          "label": "Off I go, then!"
+        },
+        {
+          "file": "sounds/PeasantWhat3.wav",
+          "label": "More work?"
+        },
+        {
+          "file": "sounds/PeasantYes2.wav",
+          "label": "Yes, milord."
+        },
+        {
+          "file": "sounds/PeasantYesAttack1.wav",
+          "label": "I guess I can..."
+        },
+        {
+          "file": "sounds/PeasantYesAttack2.wav",
+          "label": "If you want..."
+        }
+      ]
+    },
+    "input.required": {
+      "sounds": [
+        {
+          "file": "sounds/PeasantWhat1.wav",
+          "label": "Yes, milord?"
+        },
+        {
+          "file": "sounds/PeasantWhat2.wav",
+          "label": "What is it?"
+        },
+        {
+          "file": "sounds/PeasantWhat3.wav",
+          "label": "More work?"
+        },
+        {
+          "file": "sounds/PeasantWhat4.wav",
+          "label": "What?"
+        },
+        {
+          "file": "sounds/PeasantAngry2.wav",
+          "label": "We found a witch! May we burn her?"
+        }
+      ]
+    },
+    "task.error": {
+      "sounds": [
+        {
+          "file": "sounds/PeasantYesAttack4.wav",
+          "label": "That's it. I'm dead."
+        },
+        {
+          "file": "sounds/PeasantYesAttack3.wav",
+          "label": "No one else available..."
+        },
+        {
+          "file": "sounds/PeasantAngry1.wav",
+          "label": "You're the king? Well, I didn't vote for you."
+        },
+        {
+          "file": "sounds/PeasantAngry3.wav",
+          "label": "Help! Help! I'm being repressed!"
+        },
+        {
+          "file": "sounds/PeasantAngry4.wav",
+          "label": "A horse kicked me once. It hurt."
+        }
+      ]
+    }
+  }
+}

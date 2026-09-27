@@ -635,7 +635,18 @@ if [ -n "$SCRIPT_DIR" ]; then
     cp "$SCRIPT_DIR/scripts/"*.html "$INSTALL_DIR/scripts/" 2>/dev/null || true
     cp "$SCRIPT_DIR/scripts/"*.swift "$INSTALL_DIR/scripts/" 2>/dev/null || true
     cp "$SCRIPT_DIR/scripts/"*.js "$INSTALL_DIR/scripts/" 2>/dev/null || true
+    if [ -d "$SCRIPT_DIR/scripts/fonts" ]; then
+      mkdir -p "$INSTALL_DIR/scripts/fonts"
+      cp "$SCRIPT_DIR/scripts/fonts/"* "$INSTALL_DIR/scripts/fonts/" 2>/dev/null || true
+    fi
   fi
+  for _pp_custom in "$SCRIPT_DIR"/custom-packs/*; do
+    [ -f "$_pp_custom/openpeon.json" ] || continue
+    mkdir -p "$INSTALL_DIR/packs"
+    rm -rf "$INSTALL_DIR/packs/$(basename "$_pp_custom")"
+    cp -R "$_pp_custom" "$INSTALL_DIR/packs/"
+    echo "Installed custom pack: $(basename "$_pp_custom")"
+  done
   if [ -f "$SCRIPT_DIR/docs/peon-icon.png" ]; then
     mkdir -p "$INSTALL_DIR/docs"
     cp "$SCRIPT_DIR/docs/peon-icon.png" "$INSTALL_DIR/docs/"

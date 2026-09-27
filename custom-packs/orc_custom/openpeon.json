@@ -1,0 +1,182 @@
+{
+  "cesp_version": "1.0",
+  "name": "orc_custom",
+  "display_name": "Orc Peon (custom)",
+  "version": "1.0.0",
+  "description": "Hand-picked Peon lines for the warcraft overlay theme",
+  "license": "CC-BY-NC-4.0",
+  "language": "en",
+  "icon": "portrait.gif",
+  "speaker": "Peon",
+  "tint": "orc",
+  "categories": {
+    "session.start": {
+      "sounds": [
+        {
+          "file": "sounds/PeonReady1.wav",
+          "label": "Ready to work?"
+        },
+        {
+          "file": "sounds/PeonWhat1.wav",
+          "label": "Yes?"
+        },
+        {
+          "file": "sounds/PeonWhat3.wav",
+          "label": "What you want?"
+        }
+      ]
+    },
+    "task.acknowledge": {
+      "sounds": [
+        {
+          "file": "sounds/PeonYes1.wav",
+          "label": "I can do that."
+        },
+        {
+          "file": "sounds/PeonYes2.wav",
+          "label": "Be happy to."
+        },
+        {
+          "file": "sounds/PeonYes3.wav",
+          "label": "Work, work."
+        },
+        {
+          "file": "sounds/PeonYes4.wav",
+          "label": "Okie dokie."
+        },
+        {
+          "file": "sounds/PeonYesAttack1.wav",
+          "label": "OK."
+        },
+        {
+          "file": "sounds/PeonYesAttack2.wav",
+          "label": "I can do that."
+        },
+        {
+          "file": "sounds/PeonYesAttack3.wav",
+          "label": "Be happy to."
+        }
+      ]
+    },
+    "resource.limit": {
+      "sounds": [
+        {
+          "file": "sounds/PeonWarcry1.wav",
+          "label": "Why not?"
+        }
+      ]
+    },
+    "user.spam": {
+      "sounds": [
+        {
+          "file": "sounds/PeonAngry1.wav",
+          "label": "Whaaat?"
+        },
+        {
+          "file": "sounds/PeonAngry2.wav",
+          "label": "Me busy, leave me alone!"
+        },
+        {
+          "file": "sounds/PeonAngry3.wav",
+          "label": "No time for play."
+        }
+      ]
+    },
+    "task.complete": {
+      "sounds": [
+        {
+          "file": "sounds/PeonReady1.wav",
+          "label": "Ready to work?"
+        },
+        {
+          "file": "sounds/PeonYes3.wav",
+          "label": "Work, work."
+        },
+        {
+          "file": "sounds/PeonWhat4.wav",
+          "label": "Something need doing?"
+        },
+        {
+          "file": "sounds/zugzug_done.wav",
+          "label": "Work complete."
+        },
+        {
+          "file": "sounds/zugzug_done2.wav",
+          "label": "Done building ship!"
+        },
+        {
+          "file": "sounds/PeonYes1.wav",
+          "label": "I can do that."
+        },
+        {
+          "file": "sounds/PeonYes2.wav",
+          "label": "Be happy to."
+        },
+        {
+          "file": "sounds/PeonYes4.wav",
+          "label": "Okie dokie."
+        },
+        {
+          "file": "sounds/PeonYesAttack1.wav",
+          "label": "OK."
+        },
+        {
+          "file": "sounds/PeonYesAttack2.wav",
+          "label": "Get 'em!"
+        },
+        {
+          "file": "sounds/PeonYesAttack3.wav",
+          "label": "I'll try."
+        }
+      ]
+    },
+    "input.required": {
+      "sounds": [
+        {
+          "file": "sounds/PeonWhat1.wav",
+          "label": "Yes?"
+        },
+        {
+          "file": "sounds/PeonWhat3.wav",
+          "label": "What you want?"
+        },
+        {
+          "file": "sounds/PeonWhat4.wav",
+          "label": "Something need doing?"
+        },
+        {
+          "file": "sounds/PeonWhat2.wav",
+          "label": "Hmm?"
+        },
+        {
+          "file": "sounds/PeonReady1.wav",
+          "label": "Ready to work?"
+        },
+        {
+          "file": "sounds/PeonWarcry1.wav",
+          "label": "Why not?"
+        },
+        {
+          "file": "sounds/PeonAngry1.wav",
+          "label": "Whaaat?"
+        }
+      ]
+    },
+    "task.error": {
+      "sounds": [
+        {
+          "file": "sounds/PeonAngry4.wav",
+          "label": "Me not that kind of orc!"
+        },
+        {
+          "file": "sounds/PeonAngry2.wav",
+          "label": "Me busy, leave me alone!"
+        },
+        {
+          "file": "sounds/PeonAngry3.wav",
+          "label": "No time for play."
+        }
+      ]
+    }
+  }
+}

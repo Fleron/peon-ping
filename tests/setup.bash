@@ -295,6 +295,9 @@ elif [[ "$1" == "-l" ]] && [[ "$2" == "JavaScript" ]]; then
   if [[ "$*" == *mac-overlay* ]] && [ -n "${PEON_WARP_FOCUS_URL:-}" ]; then
     _overlay_line="$_overlay_line PEON_WARP_FOCUS_URL=${PEON_WARP_FOCUS_URL}"
   fi
+  if [[ "$*" == *mac-overlay-warcraft* ]]; then
+    _overlay_line="$_overlay_line PEON_SOUND_LABEL=${PEON_SOUND_LABEL:-} PEON_PACK_SPEAKER=${PEON_PACK_SPEAKER:-} PEON_PACK_TINT=${PEON_PACK_TINT:-} PEON_NOTIF_TITLE=${PEON_NOTIF_TITLE:-}"
+  fi
   echo "$_overlay_line" >> "${CLAUDE_PEON_DIR}/overlay.log"
 else
   echo "$@" >> "${CLAUDE_PEON_DIR}/osascript.log"

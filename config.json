@@ -1,5 +1,5 @@
 {
-  "default_pack": "peon",
+  "default_pack": "orc_custom",
   "volume": 0.5,
   "enabled": true,
   "desktop_notifications": true,
@@ -25,7 +25,12 @@
   "pack_rotation_mode": "random",
   "path_rules": [],
   "exclude_dirs": [],
-  "ide_rules": [],
+  "ide_rules": [
+    {
+      "ide": "codex",
+      "pack": "human_custom"
+    }
+  ],
   "session_ttl_days": 7,
   "use_sound_effects_device": true,
   "linux_audio_player": "",
@@ -38,18 +43,20 @@
   "terminal_tab_title": true,
   "tmux_passthrough": false,
   "suppress_sound_when_tab_focused": false,
-  "notification_style": "standard",
-  "notification_categories": ["task.complete", "input.required"],
+  "notification_style": "overlay",
+  "overlay_theme": "warcraft",
+  "notification_categories": [
+    "task.complete",
+    "input.required"
+  ],
   "notification_position": "top-center",
   "notification_dismiss_seconds": 4,
   "notification_all_screens": true,
   "notification_title_override": "",
-  "notification_title_marker": "●",
+  "notification_title_marker": "\u25cf",
   "notification_title_ide": false,
   "notification_title_script": "",
   "project_name_map": {},
-  "debug": false,
-  "debug_retention_days": 7,
   "trainer": {
     "enabled": false,
     "exercises": {

@@ -109,6 +109,22 @@ teardown() {
   [ -f "$INSTALL_DIR/packs/peon/openpeon.json" ]
 }
 
+@test "local clone install copies custom packs, warcraft theme and bundled font" {
+  local repo; repo="$(dirname "$BATS_TEST_FILENAME")/.."
+  mkdir -p "$CLONE_DIR/custom-packs" "$CLONE_DIR/scripts/fonts"
+  cp -R "$repo/custom-packs/orc_custom" "$repo/custom-packs/human_custom" "$CLONE_DIR/custom-packs/"
+  cp "$repo/scripts/mac-overlay-warcraft.js" "$CLONE_DIR/scripts/"
+  cp "$repo/scripts/fonts/Marcellus-Regular.ttf" "$CLONE_DIR/scripts/fonts/"
+  run bash "$CLONE_DIR/install.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Installed custom pack: orc_custom"* ]]
+  [[ "$output" == *"Installed custom pack: human_custom"* ]]
+  [ -f "$INSTALL_DIR/packs/orc_custom/openpeon.json" ]
+  [ -f "$INSTALL_DIR/packs/human_custom/portrait.gif" ]
+  [ -f "$INSTALL_DIR/scripts/mac-overlay-warcraft.js" ]
+  [ -f "$INSTALL_DIR/scripts/fonts/Marcellus-Regular.ttf" ]
+}
+
 @test "fresh install downloads sound files from registry" {
   bash "$CLONE_DIR/install.sh"
   # Peon pack should have sound files

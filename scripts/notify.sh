@@ -88,7 +88,7 @@ except Exception:
     print('')
 " 2>/dev/null || echo "")
   case "$theme" in
-    jarvis|glass|sakura) echo "$theme" ;;
+    jarvis|glass|sakura|warcraft) echo "$theme" ;;
     *) echo "" ;;
   esac
 }
@@ -479,7 +479,7 @@ case "$PEON_PLATFORM" in
           _notify_debug "overlay spawn mode=all-screens count=$screen_count dismiss=$dismiss_secs script=$(printf '%q' "$overlay_script")"
           for _si in $(seq 0 $((screen_count - 1))); do
             _notify_debug "overlay spawn screen=$_si"
-            PEON_CLICK_COMMAND="$click_command" \
+            PEON_CLICK_COMMAND="$click_command" PEON_NOTIF_TITLE="$title" \
             PEON_WARP_FOCUS_URL="$warp_focus_url" \
             PEON_CMUX_FOCUS_HELPER="$cmux_focus_helper" \
             PEON_CMUX_FOCUS_CLI="$cmux_cli" \
@@ -491,7 +491,7 @@ case "$PEON_PLATFORM" in
           done
         else
           _notify_debug "overlay spawn mode=single dismiss=$dismiss_secs script=$(printf '%q' "$overlay_script")"
-          PEON_CLICK_COMMAND="$click_command" \
+          PEON_CLICK_COMMAND="$click_command" PEON_NOTIF_TITLE="$title" \
           PEON_WARP_FOCUS_URL="$warp_focus_url" \
           PEON_CMUX_FOCUS_HELPER="$cmux_focus_helper" \
           PEON_CMUX_FOCUS_CLI="$cmux_cli" \

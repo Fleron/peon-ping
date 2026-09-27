@@ -143,3 +143,57 @@ SCRIPT
   grep -q " cwd /tmp/myproject" "$TEST_DIR/osascript_calls.log"
   ! grep -q "to activate" "$TEST_DIR/osascript_calls.log"
 }
+
+warcraft_setup() {
+  local src; src="$(dirname "$PEON_SH")"
+  cp -R "$src/custom-packs/orc_custom" "$src/custom-packs/human_custom" "$TEST_DIR/packs/"
+  cp "$src/scripts/mac-overlay-warcraft.js" "$TEST_DIR/scripts/"
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{ "default_pack": "orc_custom", "volume": 0.5, "enabled": true, "desktop_notifications": true,
+  "notification_style": "overlay", "overlay_theme": "warcraft",
+  "ide_rules": [{"ide": "codex", "pack": "human_custom"}],
+  "categories": { "task.complete": true, "input.required": true, "task.error": true } }
+JSON
+}
+
+# The overlay line must carry a label from <pack>'s <category> list.
+assert_label_from() {
+  local line labels l
+  line="$(cat "$TEST_DIR/overlay.log")"
+  labels="$(python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); print("\n".join(s["label"] for s in m["categories"][sys.argv[2]]["sounds"]))' "$TEST_DIR/packs/$1/openpeon.json" "$2")"
+  while IFS= read -r l; do
+    [[ "$line" == *"PEON_SOUND_LABEL=$l PEON_PACK_SPEAKER"* ]] && return 0
+  done <<< "$labels"
+  echo "no $1/$2 label in: $line" >&2
+  return 1
+}
+
+@test "warcraft: Claude done popup gets orc line, speaker, tint, project and portrait" {
+  warcraft_setup
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  local line; line="$(cat "$TEST_DIR/overlay.log")"
+  [[ "$line" == *"mac-overlay-warcraft.js"* ]]
+  [[ "$line" == *"packs/orc_custom/portrait.gif"* ]]
+  [[ "$line" == *"PEON_PACK_SPEAKER=Peon PEON_PACK_TINT=orc PEON_NOTIF_TITLE=myproject"* ]]
+  assert_label_from orc_custom task.complete
+}
+
+@test "warcraft: Codex approval popup gets human line and peasant portrait" {
+  warcraft_setup
+  run_peon '{"hook_event_name":"PermissionRequest","cwd":"/tmp/myproject","session_id":"codex-1","source":"codex","permission_mode":"default","tool_name":"Bash"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  local line; line="$(cat "$TEST_DIR/overlay.log")"
+  [[ "$line" == *"packs/human_custom/portrait.gif"* ]]
+  [[ "$line" == *"PEON_PACK_SPEAKER=Peasant PEON_PACK_TINT=human"* ]]
+  assert_label_from human_custom input.required
+}
+
+@test "warcraft: failed Bash command plays an error line without a popup" {
+  warcraft_setup
+  run_peon '{"hook_event_name":"PostToolUseFailure","tool_name":"Bash","error":"Exit code 1","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  afplay_was_called
+  [[ "$(afplay_sound)" == *"packs/orc_custom/sounds/"* ]]
+  ! [ -s "$TEST_DIR/overlay.log" ]
+}
