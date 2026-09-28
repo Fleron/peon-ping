@@ -13,16 +13,28 @@
     "session.start": {
       "sounds": [
         {
-          "file": "sounds/PeasantReady1.wav",
-          "label": "Ready to work."
+          "file": "sounds/PeasantYes1.wav",
+          "label": "Right-o."
         },
         {
-          "file": "sounds/PeasantWhat1.wav",
-          "label": "Yes, milord?"
+          "file": "sounds/PeasantYes3.wav",
+          "label": "All right."
         },
         {
-          "file": "sounds/PeasantWhat2.wav",
-          "label": "What is it?"
+          "file": "sounds/PeasantYes4.wav",
+          "label": "Off I go, then!"
+        },
+        {
+          "file": "sounds/PeasantYes2.wav",
+          "label": "Yes, milord."
+        },
+        {
+          "file": "sounds/PeasantYesAttack1.wav",
+          "label": "I guess I can..."
+        },
+        {
+          "file": "sounds/PeasantYesAttack2.wav",
+          "label": "If you want..."
         }
       ]
     },
@@ -93,32 +105,8 @@
           "label": "Ready to work."
         },
         {
-          "file": "sounds/PeasantYes1.wav",
-          "label": "Right-o."
-        },
-        {
-          "file": "sounds/PeasantYes3.wav",
-          "label": "All right."
-        },
-        {
-          "file": "sounds/PeasantYes4.wav",
-          "label": "Off I go, then!"
-        },
-        {
           "file": "sounds/PeasantWhat3.wav",
           "label": "More work?"
-        },
-        {
-          "file": "sounds/PeasantYes2.wav",
-          "label": "Yes, milord."
-        },
-        {
-          "file": "sounds/PeasantYesAttack1.wav",
-          "label": "I guess I can..."
-        },
-        {
-          "file": "sounds/PeasantYesAttack2.wav",
-          "label": "If you want..."
         }
       ]
     },

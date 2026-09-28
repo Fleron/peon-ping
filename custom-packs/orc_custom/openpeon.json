@@ -13,16 +13,24 @@
     "session.start": {
       "sounds": [
         {
-          "file": "sounds/PeonReady1.wav",
-          "label": "Ready to work?"
+          "file": "sounds/PeonYes1.wav",
+          "label": "I can do that."
         },
         {
-          "file": "sounds/PeonWhat1.wav",
-          "label": "Yes?"
+          "file": "sounds/PeonYes2.wav",
+          "label": "Be happy to."
         },
         {
-          "file": "sounds/PeonWhat3.wav",
-          "label": "What you want?"
+          "file": "sounds/PeonYes4.wav",
+          "label": "Okie dokie."
+        },
+        {
+          "file": "sounds/PeonYesAttack1.wav",
+          "label": "OK."
+        },
+        {
+          "file": "sounds/PeonYesAttack3.wav",
+          "label": "I'll try."
         }
       ]
     },
@@ -105,28 +113,8 @@
           "label": "Done building ship!"
         },
         {
-          "file": "sounds/PeonYes1.wav",
-          "label": "I can do that."
-        },
-        {
-          "file": "sounds/PeonYes2.wav",
-          "label": "Be happy to."
-        },
-        {
-          "file": "sounds/PeonYes4.wav",
-          "label": "Okie dokie."
-        },
-        {
-          "file": "sounds/PeonYesAttack1.wav",
-          "label": "OK."
-        },
-        {
           "file": "sounds/PeonYesAttack2.wav",
           "label": "Get 'em!"
-        },
-        {
-          "file": "sounds/PeonYesAttack3.wav",
-          "label": "I'll try."
         }
       ]
     },
