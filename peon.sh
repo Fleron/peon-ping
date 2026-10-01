@@ -923,6 +923,84 @@ _cmux_update_status_async() {
   fi
 }
 
+# --- Per-session record for the session tracker menubar app ---
+# Writes $PEON_DIR/sessions/<session_id>.json so the app can list Claude/Codex
+# sessions and focus their pane.
+# First ancestor named claude/codex. Background Claude jobs rename themselves
+# ("claude bg-spare"), so match the first word of comm.
+_session_record_agent_pid() {
+  local _w="${PPID:-}" _i _ppid _comm
+  for _i in 1 2 3 4 5 6 7 8; do
+    { [ -n "$_w" ] && [ "$_w" -gt 1 ] 2>/dev/null; } || return 0
+    read -r _ppid _comm < <(ps -p "$_w" -o ppid=,comm= 2>/dev/null) || return 0
+    _comm="${_comm%% *}"
+    case "${_comm##*/}" in
+      claude|codex) echo "$_w"; return 0 ;;
+    esac
+    _w="$_ppid"
+  done
+}
+
+_session_record_write_now() {
+  local _tty="" _tmux_socket="" _tmux_pane="" _tmux_bin="" _bundle_id=""
+  if [ -n "${TMUX:-}" ]; then
+    _peon_tmux_client_context >/dev/null
+    _resolve_session_tty
+    _tty="${PEON_SESSION_TTY:-}"
+    _tmux_socket="${TMUX%%,*}"
+    _tmux_pane="${TMUX_PANE:-}"
+    _tmux_bin="$(command -v tmux 2>/dev/null)"
+  elif [ -n "${_PEON_HOOK_TTY:-}" ]; then
+    _tty="/dev/$_PEON_HOOK_TTY"
+  fi
+  [ "$PEON_PLATFORM" = "mac" ] && _bundle_id="$(_mac_terminal_bundle_id)"
+  REC_DIR="$PEON_DIR/sessions" REC_SESSION_ID="$SESSION_ID" REC_IDE="${SESSION_IDE:-}" \
+  REC_STATUS="$STATUS" REC_EVENT="${EVENT:-}" REC_CWD="${CWD:-}" \
+  REC_TRANSCRIPT="${TRANSCRIPT_PATH:-}" REC_PID="${_SESSION_RECORD_PID:-}" \
+  REC_TTY="$_tty" REC_TMUX_SOCKET="$_tmux_socket" REC_TMUX_PANE="$_tmux_pane" \
+  REC_TMUX_BIN="$_tmux_bin" REC_BUNDLE_ID="$_bundle_id" python3 -c '
+import json, os, time
+e = os.environ
+path = os.path.join(e["REC_DIR"], e["REC_SESSION_ID"] + ".json")
+os.makedirs(e["REC_DIR"], exist_ok=True)
+try:
+    with open(path) as f:
+        old = json.load(f)
+except (OSError, ValueError):
+    old = {}
+old_focus = old.get("focus") or {}
+focus = {k: e["REC_" + k.upper()] or old_focus.get(k, "")
+         for k in ("tty", "tmux_socket", "tmux_pane", "tmux_bin", "bundle_id")}
+record = {
+    "v": 1,
+    "session_id": e["REC_SESSION_ID"],
+    "agent": e["REC_IDE"],
+    "status": e["REC_STATUS"],
+    "event": e["REC_EVENT"],
+    "updated_at": time.time(),
+    "cwd": e["REC_CWD"] or old.get("cwd", ""),
+    "transcript_path": e["REC_TRANSCRIPT"] or old.get("transcript_path", ""),
+    "agent_pid": int(e["REC_PID"]) if e["REC_PID"] else old.get("agent_pid"),
+    "focus": focus,
+}
+tmp = "%s.tmp.%d" % (path, os.getpid())
+with open(tmp, "w") as f:
+    json.dump(record, f)
+os.replace(tmp, path)
+'
+}
+
+_session_record_write() {
+  [ "${SESSION_RECORD:-}" = "1" ] && [ -n "${SESSION_ID:-}" ] && [ -n "${STATUS:-}" ] || return 0
+  # Walk now: the hook's parent shell may be gone once the background job runs.
+  _SESSION_RECORD_PID="$(_session_record_agent_pid)"
+  if [ "${PEON_TEST:-0}" = "1" ]; then
+    _session_record_write_now || true
+  else
+    ( _session_record_write_now ) >/dev/null 2>&1 &
+  fi
+}
+
 # --- IDE ancestor PID detection (macOS click-to-focus for GUI IDEs) ---
 # Walks up the process tree from the current PID looking for a known IDE.
 # Returns the IDE PID, or 0 if none found. Skips "Helper" child processes.
@@ -5494,7 +5572,7 @@ def normalize_ide_id(value):
 
 def detect_session_ide(source_value, event_payload, session_value):
     source_key = normalize_ide_id(source_value)
-    if source_key and source_key not in ('resume', 'compact'):
+    if source_key and source_key not in ('startup', 'resume', 'clear', 'compact'):
         return source_key
     if event_payload.get('workspace_roots'):
         return 'cursor'
@@ -5578,6 +5656,8 @@ def path_pattern_matches(path_value, pattern):
     return False
 
 session_ide = detect_session_ide(session_source, event_data, session_id)
+session_record = session_ide in ('claude', 'codex') and not agent_id and event not in ('SubagentStart', 'SubagentStop')
+transcript_path = event_data.get('transcript_path', '') or ''
 
 log('hook', event=event, session=session_id, cwd=cwd, paused=paused)
 
@@ -5638,6 +5718,20 @@ session_packs = session_packs_clean
 if session_packs != state.get('session_packs', {}):
     state['session_packs'] = session_packs
     state_dirty = True
+
+_sessions_dir = os.path.join(peon_dir, 'sessions')
+if os.path.isdir(_sessions_dir):
+    for _name in os.listdir(_sessions_dir):
+        if not _name.endswith('.json'):
+            continue
+        _record_path = os.path.join(_sessions_dir, _name)
+        try:
+            with open(_record_path) as _f:
+                _updated = float(json.load(_f).get('updated_at') or 0)
+            if _updated < cutoff:
+                os.remove(_record_path)
+        except (OSError, ValueError, TypeError, AttributeError):
+            pass
 
 recent_ide_sources = state.get('recent_ide_sources', {})
 if not isinstance(recent_ide_sources, dict):
@@ -6141,6 +6235,12 @@ elif event == 'SessionEnd':
     log('route', category='none', suppressed=True, reason='session_end_cleanup')
     log('exit', duration_ms=int((time.monotonic() - _peon_start) * 1000), exit=0)
     print('EVENT=' + q(event))
+    print('SESSION_ID=' + q(session_id))
+    print('SESSION_IDE=' + q(session_ide))
+    print('SESSION_RECORD=' + ('1' if session_record else ''))
+    print('CWD=' + q(cwd))
+    print('TRANSCRIPT_PATH=' + q(transcript_path))
+    print('STATUS=closed')
     print('PEON_EXIT=true')
     sys.exit(0)
 elif event in ('PreToolUse', 'PostToolUse'):
@@ -6597,6 +6697,8 @@ print('NOTIF_MARKER=' + q(cfg.get('notification_title_marker', '●')))
 print('NOTIF_CLOSE_BUTTON=' + ('true' if cfg.get('notification_close_button', True) else 'false'))
 print('NOTIF_STACKING=' + ('true' if cfg.get('notification_stacking', True) else 'false'))
 print('SESSION_ID=' + q(session_id))
+print('SESSION_RECORD=' + ('1' if session_record else ''))
+print('TRANSCRIPT_PATH=' + q(transcript_path))
 print('USE_SOUND_EFFECTS_DEVICE=' + q(str(use_sound_effects_device).lower()))
 print('LINUX_AUDIO_PLAYER=' + q(linux_audio_player))
 print('PEON_SSH_AUDIO_MODE=' + q(str(cfg.get('ssh_audio_mode', 'relay'))))
@@ -6713,6 +6815,7 @@ if [ "${PEON_EXIT:-true}" = "true" ]; then
     { printf '\033]0;%s\007' "$_peon_title" > "$_peon_early_tty"; } 2>/dev/null || true
   fi
   _cmux_update_status_async
+  _session_record_write
   exit 0
 fi
 
@@ -6896,6 +6999,7 @@ fi
 
 # --- Mirror the status into cmux's sidebar pill ---
 _cmux_update_status_async
+_session_record_write
 
 # --- Set iTerm2 tab color (OSC 6) ---
 # Detects iTerm2 via ITERM_SESSION_ID (persists inside local tmux where TERM_PROGRAM=tmux)
