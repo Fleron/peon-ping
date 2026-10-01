@@ -79,12 +79,16 @@ record() {
 @test "Claude SessionEnd records closed and keeps earlier focus and pid" {
   claude_event SessionStart ',"source":"startup"'
   tmp="$(mktemp)"
-  jq '.agent_pid = 41234 | .focus.tmux_pane = "%14" | .focus.bundle_id = "com.mitchellh.ghostty"' \
+  jq '.agent_pid = 41234 | .focus.tty = "/dev/ttys012" | .focus.tmux_pane = "%14" | .focus.bundle_id = "com.mitchellh.ghostty"' \
     "$TEST_DIR/sessions/$SID.json" > "$tmp" && mv "$tmp" "$TEST_DIR/sessions/$SID.json"
 
+  # The agent process is gone by SessionEnd: nothing on the process tree resolves.
+  printf '#!/bin/sh\nexit 1\n' > "$MOCK_BIN/ps"
+  chmod +x "$MOCK_BIN/ps"
   claude_event SessionEnd ',"reason":"prompt_input_exit"'
   [ "$(record .status)" = "closed" ]
   [ "$(record .event)" = "SessionEnd" ]
+  [ "$(record .focus.tty)" = "/dev/ttys012" ]
   [ "$(record .focus.tmux_pane)" = "%14" ]
   [ "$(record .focus.bundle_id)" = "com.mitchellh.ghostty" ]
   [ "$(record .agent_pid)" = "41234" ]
