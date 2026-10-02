@@ -19,11 +19,16 @@ for(var i=0;i<ts.length;i++){try{out.push(ts[i].id()+"\t"+ts[i].name())}catch(e)
 return out.join("\n")}'
 }
 
+# `focus` alone does nothing visible when the terminal sits in a background tab,
+# so select its tab and raise its window first.
 _focus_where() {
-  _jxa 'function run(argv){var field=argv[0],value=argv[1];var g=Application("Ghostty");var ts=g.terminals();
+  _jxa 'function reveal(g,id){var ws=g.windows();for(var w=0;w<ws.length;w++){var tabs=ws[w].tabs();
+for(var t=0;t<tabs.length;t++){var tt=tabs[t].terminals();for(var k=0;k<tt.length;k++){if(tt[k].id()===id){
+try{g.selectTab(tabs[t])}catch(e){}try{g.activateWindow(ws[w])}catch(e){}return}}}}}
+function run(argv){var field=argv[0],value=argv[1];var g=Application("Ghostty");var ts=g.terminals();
 for(var i=0;i<ts.length;i++){try{var v=field==="name"?ts[i].name():ts[i].workingDirectory();
 var hit=field==="name"?v.indexOf(value)!==-1:v===value;
-if(hit){g.focus(ts[i]);g.activate();return ts[i].id()}}catch(e){}}return ""}' "$1" "$2"
+if(hit){var id=ts[i].id();try{reveal(g,id)}catch(e){}g.focus(ts[i]);g.activate();return id}}catch(e){}}return ""}' "$1" "$2"
 }
 
 _set_title() { printf '\033]2;%s\007' "$1" > "$tty_path" 2>/dev/null; }
