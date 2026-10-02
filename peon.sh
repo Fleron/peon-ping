@@ -927,36 +927,56 @@ _cmux_update_status_async() {
 # Writes $PEON_DIR/sessions/<session_id>.json so the app can list Claude/Codex
 # sessions and focus their pane.
 # First ancestor named claude/codex. Background Claude jobs rename themselves
-# ("claude bg-spare"), so match the first word of comm.
-_session_record_agent_pid() {
-  local _w="${PPID:-}" _i _ppid _comm
+# ("claude bg-spare"), so match the first word of comm. Under the Claude Code
+# daemon the agent is a worker (itself or its parent named bg-spare/bg-pty-host)
+# whose env and ancestor ttys are inherited from whichever client started the
+# daemon; only the worker's own pty is its own.
+_session_record_agent() {
+  _SESSION_RECORD_PID="" _SESSION_RECORD_PID_TTY="" _SESSION_RECORD_DAEMON=""
+  local _w="${PPID:-}" _i _ppid _tty _comm _name _pcomm
   for _i in 1 2 3 4 5 6 7 8; do
     { [ -n "$_w" ] && [ "$_w" -gt 1 ] 2>/dev/null; } || return 0
-    read -r _ppid _comm < <(ps -p "$_w" -o ppid=,comm= 2>/dev/null) || return 0
-    _comm="${_comm%% *}"
-    case "${_comm##*/}" in
-      claude|codex) echo "$_w"; return 0 ;;
+    read -r _ppid _tty _comm < <(ps -p "$_w" -o ppid=,tty=,comm= 2>/dev/null) || return 0
+    _name="${_comm%% *}"
+    case "${_name##*/}" in
+      claude|codex)
+        _SESSION_RECORD_PID="$_w"
+        [ -n "$_tty" ] && [ "$_tty" != "??" ] && _SESSION_RECORD_PID_TTY="/dev/$_tty"
+        _pcomm="$(ps -p "$_ppid" -o comm= 2>/dev/null)"
+        case "$_comm $_pcomm" in
+          *bg-spare*|*bg-pty-host*) _SESSION_RECORD_DAEMON=1 ;;
+        esac
+        return 0 ;;
     esac
     _w="$_ppid"
   done
 }
 
 _session_record_write_now() {
-  local _tty="" _tmux_socket="" _tmux_pane="" _tmux_bin="" _bundle_id=""
-  if [ -n "${TMUX:-}" ]; then
-    _peon_tmux_client_context >/dev/null
-    _resolve_session_tty
-    _tty="${PEON_SESSION_TTY:-}"
-    _tmux_socket="${TMUX%%,*}"
-    _tmux_pane="${TMUX_PANE:-}"
-    _tmux_bin="$(command -v tmux 2>/dev/null)"
-  elif [ -n "${_PEON_HOOK_TTY:-}" ]; then
-    _tty="/dev/$_PEON_HOOK_TTY"
+  local _tty="" _tmux_socket="" _tmux_pane="" _tmux_bin="" _bundle_id="" _pid="${_SESSION_RECORD_PID:-}" _pid_null=""
+  if [ -n "${_SESSION_RECORD_DAEMON:-}" ]; then
+    _tty="${_SESSION_RECORD_PID_TTY:-}"
+  else
+    if [ -n "${TMUX:-}" ]; then
+      _peon_tmux_client_context >/dev/null
+      _resolve_session_tty
+      _tty="${PEON_SESSION_TTY:-}"
+      _tmux_socket="${TMUX%%,*}"
+      _tmux_pane="${TMUX_PANE:-}"
+      _tmux_bin="$(command -v tmux 2>/dev/null)"
+    elif [ -n "${_PEON_HOOK_TTY:-}" ]; then
+      _tty="/dev/$_PEON_HOOK_TTY"
+    fi
+    [ "$PEON_PLATFORM" = "mac" ] && _bundle_id="$(_mac_terminal_bundle_id)"
   fi
-  [ "$PEON_PLATFORM" = "mac" ] && _bundle_id="$(_mac_terminal_bundle_id)"
+  # A tty-less codex is the shared app-server, which outlives any one thread.
+  if [ "${SESSION_IDE:-}" = "codex" ] && [ -n "$_pid" ] && [ -z "${_SESSION_RECORD_PID_TTY:-}" ]; then
+    _pid="" _pid_null=1
+  fi
   REC_DIR="$PEON_DIR/sessions" REC_SESSION_ID="$SESSION_ID" REC_IDE="${SESSION_IDE:-}" \
   REC_STATUS="$STATUS" REC_EVENT="${EVENT:-}" REC_CWD="${CWD:-}" \
-  REC_TRANSCRIPT="${TRANSCRIPT_PATH:-}" REC_PID="${_SESSION_RECORD_PID:-}" \
+  REC_TRANSCRIPT="${TRANSCRIPT_PATH:-}" REC_PID="$_pid" REC_PID_NULL="$_pid_null" \
+  REC_DAEMON="${_SESSION_RECORD_DAEMON:-}" \
   REC_TTY="$_tty" REC_TMUX_SOCKET="$_tmux_socket" REC_TMUX_PANE="$_tmux_pane" \
   REC_TMUX_BIN="$_tmux_bin" REC_BUNDLE_ID="$_bundle_id" python3 -c '
 import json, os, time
@@ -968,9 +988,17 @@ try:
         old = json.load(f)
 except (OSError, ValueError):
     old = {}
+daemon = bool(e["REC_DAEMON"])
 old_focus = old.get("focus") or {}
-focus = {k: e["REC_" + k.upper()] or old_focus.get(k, "")
+inherited = ("tmux_socket", "tmux_pane", "tmux_bin", "bundle_id") if daemon else ()
+focus = {k: e["REC_" + k.upper()] or ("" if k in inherited else old_focus.get(k, ""))
          for k in ("tty", "tmux_socket", "tmux_pane", "tmux_bin", "bundle_id")}
+if e["REC_PID"]:
+    agent_pid = int(e["REC_PID"])
+elif e["REC_PID_NULL"]:
+    agent_pid = None
+else:
+    agent_pid = old.get("agent_pid")
 record = {
     "v": 1,
     "session_id": e["REC_SESSION_ID"],
@@ -980,7 +1008,8 @@ record = {
     "updated_at": time.time(),
     "cwd": e["REC_CWD"] or old.get("cwd", ""),
     "transcript_path": e["REC_TRANSCRIPT"] or old.get("transcript_path", ""),
-    "agent_pid": int(e["REC_PID"]) if e["REC_PID"] else old.get("agent_pid"),
+    "agent_pid": agent_pid,
+    "daemon": daemon,
     "focus": focus,
 }
 tmp = "%s.tmp.%d" % (path, os.getpid())
@@ -993,7 +1022,7 @@ os.replace(tmp, path)
 _session_record_write() {
   [ "${SESSION_RECORD:-}" = "1" ] && [ -n "${SESSION_ID:-}" ] && [ -n "${STATUS:-}" ] || return 0
   # Walk now: the hook's parent shell may be gone once the background job runs.
-  _SESSION_RECORD_PID="$(_session_record_agent_pid)"
+  _session_record_agent
   if [ "${PEON_TEST:-0}" = "1" ]; then
     _session_record_write_now || true
   else

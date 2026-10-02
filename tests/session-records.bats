@@ -37,7 +37,7 @@ record() {
   [ "$(record .transcript_path)" = "$TRANSCRIPT" ]
   [ "$(record '.updated_at | type')" = "number" ]
   [ "$(record '[.focus | keys[]] | sort | join(",")')" = "bundle_id,tmux_bin,tmux_pane,tmux_socket,tty" ]
-  [ "$(record '[keys[]] | sort | join(",")')" = "agent,agent_pid,cwd,event,focus,session_id,status,transcript_path,updated_at,v" ]
+  [ "$(record '[keys[]] | sort | join(",")')" = "agent,agent_pid,cwd,daemon,event,focus,session_id,status,transcript_path,updated_at,v" ]
 }
 
 @test "Claude UserPromptSubmit records working" {
@@ -145,4 +145,95 @@ record() {
   [ ! -e "$TEST_DIR/sessions/old.json" ]
   [ -e "$TEST_DIR/sessions/fresh.json" ]
   [ -e "$TEST_DIR/sessions/$SID.json" ]
+}
+
+# Fake process table: "pid ppid tty comm...". Any pid not listed (the hook's
+# real parent) is parented to $1, so the hook walks into the fake ancestry.
+fake_ancestry() {
+  local root="$1"; shift
+  printf '%s\n' "$@" > "$TEST_DIR/ps_table"
+  cat > "$MOCK_BIN/ps" <<SCRIPT
+#!/bin/bash
+pid="" fmt=""
+while [ \$# -gt 0 ]; do
+  case "\$1" in -p) pid="\$2"; shift 2 ;; -o) fmt="\$2"; shift 2 ;; *) shift ;; esac
+done
+line=\$(awk -v p="\$pid" '\$1 == p' "$TEST_DIR/ps_table")
+[ -n "\$line" ] || line="\$pid $root ?? bash"
+read -r p_pid p_ppid p_tty p_comm <<<"\$line"
+out=""
+IFS=, read -ra cols <<<"\$fmt"
+for c in "\${cols[@]}"; do
+  case "\${c%=}" in ppid) out+="\$p_ppid " ;; tty) out+="\$p_tty " ;; comm) out+="\$p_comm " ;; esac
+done
+echo "\${out% }"
+SCRIPT
+  chmod +x "$MOCK_BIN/ps"
+}
+
+@test "daemon Claude session records the worker's own pty and blanks inherited focus" {
+  mkdir -p "$TEST_DIR/sessions"
+  echo "{\"v\":1,\"session_id\":\"$SID\",\"updated_at\":$(date +%s),\"focus\":{\"tty\":\"/dev/ttys021\",\"tmux_pane\":\"%14\",\"bundle_id\":\"com.mitchellh.ghostty\"}}" \
+    > "$TEST_DIR/sessions/$SID.json"
+  fake_ancestry 9001 \
+    "9001 9002 ttys027 claude bg-spare --bg-spare /tmp/cc-daemon/spare/a.claim.sock" \
+    "9002 9003 ?? claude bg-pty-host --bg-pty-host /tmp/cc-daemon/spare/a.pty.sock" \
+    "9003 9004 ?? /Users/dev/.local/bin/claude" \
+    "9004 9005 ttys021 claude agents" \
+    "9005 1 ttys021 -zsh"
+  export TMUX="/private/tmp/tmux-501/default,123,0" TMUX_PANE="%3" TERM_PROGRAM=ghostty
+
+  claude_event UserPromptSubmit ',"prompt":"go"'
+  [ "$(record .daemon)" = "true" ]
+  [ "$(record .agent_pid)" = "9001" ]
+  [ "$(record .focus.tty)" = "/dev/ttys027" ]
+  [ "$(record '[.focus.tmux_socket, .focus.tmux_pane, .focus.tmux_bin, .focus.bundle_id] | join("")')" = "" ]
+}
+
+@test "daemon worker launched as plain claude under bg-pty-host is still a daemon session" {
+  fake_ancestry 9001 \
+    "9001 9002 ttys030 claude --session-id x" \
+    "9002 1 ?? claude bg-pty-host --bg-pty-host /tmp/cc-daemon/spare/b.pty.sock"
+
+  claude_event Stop ',"stop_hook_active":false'
+  [ "$(record .daemon)" = "true" ]
+  [ "$(record .focus.tty)" = "/dev/ttys030" ]
+}
+
+@test "plain terminal Claude session keeps its pane focus and daemon false" {
+  fake_ancestry 9001 \
+    "9001 9005 ttys016 claude" \
+    "9005 1 ttys016 -zsh"
+  export TERM_PROGRAM=ghostty
+
+  claude_event PermissionRequest ',"tool_name":"Bash","tool_input":{"command":"ls"}'
+  [ "$(record .daemon)" = "false" ]
+  [ "$(record .agent_pid)" = "9001" ]
+  [ "$(record .focus.tty)" = "/dev/ttys016" ]
+  [ "$(record .focus.bundle_id)" = "com.mitchellh.ghostty" ]
+}
+
+@test "Codex hooks from the tty-less app-server record a null agent_pid" {
+  export PEON_TEST=1
+  mkdir -p "$TEST_DIR/sessions"
+  echo '{"v":1,"session_id":"codex-thread-1","updated_at":'"$(date +%s)"',"agent_pid":53960}' > "$TEST_DIR/sessions/codex-thread-1.json"
+  fake_ancestry 9010 \
+    "9010 9011 ?? codex app-server" \
+    "9011 1 ?? launchd"
+
+  echo '{"hook_event_name":"UserPromptSubmit","session_id":"thread-1","cwd":"/tmp/myproject","prompt":"go"}' | bash "$CODEX_SH"
+  [ "$(jq -r .agent_pid "$TEST_DIR/sessions/codex-thread-1.json")" = "null" ]
+  [ "$(jq -r .focus.tty "$TEST_DIR/sessions/codex-thread-1.json")" = "" ]
+  [ "$(jq -r .daemon "$TEST_DIR/sessions/codex-thread-1.json")" = "false" ]
+}
+
+@test "Codex running on a terminal keeps its pid" {
+  export PEON_TEST=1
+  fake_ancestry 9010 \
+    "9010 9011 ttys018 codex" \
+    "9011 1 ttys018 -zsh"
+
+  echo '{"hook_event_name":"UserPromptSubmit","session_id":"thread-2","cwd":"/tmp/myproject","prompt":"go"}' | bash "$CODEX_SH"
+  [ "$(jq -r .agent_pid "$TEST_DIR/sessions/codex-thread-2.json")" = "9010" ]
+  [ "$(jq -r .focus.tty "$TEST_DIR/sessions/codex-thread-2.json")" = "/dev/ttys018" ]
 }
